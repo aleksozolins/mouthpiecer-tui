@@ -60,6 +60,8 @@ export KNACK_API_KEY="your-api-key"
 ** High Value
 - [X] Searchable Make selection - show the 67 manufacturers from Knack as a numbered list or fuzzy search instead of free text input
 - [ ] Browse other mouthpiecers - view other users' collections to scope out potential trades
+  - Requires a Knack scene/view listing all users (mouthpiecers)
+  - Requires a Knack scene/view to fetch mouthpieces by user ID (read-only)
 - [X] Collection stats - show summary when entering My Mouthpieces (e.g. "12 mouthpieces | 5 makes | 8 one-piece, 3 cups, 1 rim")
 - [X] Pagination - paginate mouthpiece list to avoid scrolling issues
 
