@@ -25,6 +25,7 @@ FIELD_MODEL = 'field_16'
 FIELD_TYPE = 'field_24'
 FIELD_THREADS = 'field_25'
 FIELD_FINISH = 'field_26'
+FIELD_NOTE = 'field_27'
 
 # Knack field ID mappings (user object)
 FIELD_USER_NAME = 'field_1'
@@ -128,12 +129,14 @@ def mympcsmenu():
     print()
     if mpcselect == 0:
         console.print("[green][1][/green] Add mouthpiece               [green][3][/green] Edit mouthpiece")
-        console.print("[green][2][/green] Delete mouthpiece            [green][0][/green] Back to main menu")
+        console.print("[green][2][/green] Delete mouthpiece            [green][4][/green] View details")
+        console.print("[green][0][/green] Back to main menu")
         print("------------------------------------------------------")
         print()
     if mpcselect == 1:
         print("[1] Add mouthpiece               [3] Edit mouthpiece")
-        print("[2] Delete mouthpiece            [0] Back to main menu")
+        print("[2] Delete mouthpiece            [4] View details")
+        print("[0] Back to main menu")
         print("------------------------------------------------------")
         print()
 
@@ -244,12 +247,15 @@ def addmpc():
     elif option == 7:
         newfinish = "plastic"
     print()
+    newnote = input("Note (optional): ")
+    print()
     print("------------------------")
     console.print(f"Make: [green]{newmake}[/green]")
     console.print(f"Model: [green]{newmodel}[/green]")
     console.print(f"Type: [green]{newtype}[/green]")
     console.print(f"Threads: [green]{newthreads}[/green]")
     console.print(f"Finish: [green]{newfinish}[/green]")
+    console.print(f"Note: [green]{newnote}[/green]")
     print("------------------------")
     print()
     while True:
@@ -261,7 +267,7 @@ def addmpc():
         print()
     if conf == "y":
         api_url = "https://api.knack.com/v1/pages/scene_18/views/view_18/records"
-        mouthpiece = {FIELD_MAKE: newmake, FIELD_TYPE: newtype, FIELD_MODEL: newmodel, FIELD_THREADS: newthreads, FIELD_FINISH: newfinish}
+        mouthpiece = {FIELD_MAKE: newmake, FIELD_TYPE: newtype, FIELD_MODEL: newmodel, FIELD_THREADS: newthreads, FIELD_FINISH: newfinish, FIELD_NOTE: newnote}
         headers = {"content-type":"application/json", "X-Knack-Application-Id": KNACK_APP_ID, "X-Knack-REST-API-KEY":"knack", "Authorization":token}
         response = requests.post(api_url, data=json.dumps(mouthpiece), headers=headers)
         print()
@@ -289,7 +295,7 @@ def mympcs():
             selection = input("Make a menu selection: ")
             try:
                 selection = (int(selection))
-                if selection not in (1, 2, 3, 0):
+                if selection not in (1, 2, 3, 4, 0):
                     raise ValueError
             except ValueError:
                 console.print("[red]Invalid Option[/red]")
@@ -302,6 +308,8 @@ def mympcs():
             delmpc()
         elif selection == 3:
             editmpc()
+        elif selection == 4:
+            viewmpc()
         elif selection == 0:
             mainmenu()
 
@@ -325,6 +333,7 @@ def listmpcs():
             'Type': record.get(FIELD_TYPE, ''),
             'Threads': record.get(FIELD_THREADS, ''),
             'Finish': record.get(FIELD_FINISH, ''),
+            'Note': record.get(FIELD_NOTE, ''),
         })
 
     # Build rich table
@@ -335,9 +344,11 @@ def listmpcs():
     table.add_column("Type")
     table.add_column("Threads")
     table.add_column("Finish")
+    table.add_column("Note", justify="center")
 
     style = "green" if mpcselect == 1 else None
     for mpc in mouthpieces:
+        has_note = "X" if mpc['Note'] else ""
         table.add_row(
             str(mpc['index']),
             mpc['Make'],
@@ -345,6 +356,7 @@ def listmpcs():
             mpc['Type'],
             mpc['Threads'],
             mpc['Finish'],
+            has_note,
             style=style
         )
 
@@ -489,6 +501,12 @@ def editmpc():
         except ValueError:
             console.print("[red]Invalid Option[/red]")
             print()
+
+    # Note (Enter keeps current)
+    print()
+    current_note_display = mpc['Note'][:30] + "..." if len(mpc['Note']) > 30 else mpc['Note']
+    newnote = input(f"Note ({current_note_display}): ") or mpc['Note']
+
     print()
     print("OLD---------------------")
     console.print(f"Make: [red]{mpc['Make']}[/red]")
@@ -496,6 +514,7 @@ def editmpc():
     console.print(f"Type: [red]{mpc['Type']}[/red]")
     console.print(f"Threads: [red]{mpc['Threads']}[/red]")
     console.print(f"Finish: [red]{mpc['Finish']}[/red]")
+    console.print(f"Note: [red]{mpc['Note']}[/red]")
     print("---------------------OLD")
     print()
     print("NEW---------------------")
@@ -504,6 +523,7 @@ def editmpc():
     console.print(f"Type: [green]{newtype}[/green]")
     console.print(f"Threads: [green]{newthreads}[/green]")
     console.print(f"Finish: [green]{newfinish}[/green]")
+    console.print(f"Note: [green]{newnote}[/green]")
     print("---------------------NEW")
     print()
     while True:
@@ -516,7 +536,7 @@ def editmpc():
     if conf == "y":
         editid = mpc['id']
         api_url = "https://api.knack.com/v1/pages/scene_18/views/view_18/records/" + editid
-        mouthpiece = {FIELD_MAKE: newmake, FIELD_TYPE: newtype, FIELD_MODEL: newmodel, FIELD_THREADS: newthreads, FIELD_FINISH: newfinish}
+        mouthpiece = {FIELD_MAKE: newmake, FIELD_TYPE: newtype, FIELD_MODEL: newmodel, FIELD_THREADS: newthreads, FIELD_FINISH: newfinish, FIELD_NOTE: newnote}
         headers = {"content-type":"application/json", "X-Knack-Application-Id": KNACK_APP_ID, "X-Knack-REST-API-KEY":"knack", "Authorization":token}
         response = requests.put(api_url, data=json.dumps(mouthpiece), headers=headers)
         print()
@@ -532,6 +552,48 @@ def editmpc():
     else:
         mpcselect = 0
         mympcs()
+
+# View mouthpiece details
+def viewmpc():
+    global mpcselect
+    mpcselect = 1
+    mympcsmenu()
+    listmpcs()
+    print("Make a menu selection: 4")
+    print()
+    while True:
+        selection = input("Select a mouthpiece by Index to view: ")
+        try:
+            selection = (int(selection))
+            if selection not in range(0, len(mouthpieces)):
+                raise ValueError
+        except ValueError:
+            console.print("[red]Invalid Option[/red]")
+            print()
+            continue
+        break
+    print()
+    mpc = mouthpieces[selection]
+    console.print("=" * 40)
+    console.print(f"[bold]Mouthpiece Details[/bold]")
+    console.print("=" * 40)
+    console.print(f"Make:    [cyan]{mpc['Make']}[/cyan]")
+    console.print(f"Model:   [cyan]{mpc['Model']}[/cyan]")
+    console.print(f"Type:    [cyan]{mpc['Type']}[/cyan]")
+    console.print(f"Threads: [cyan]{mpc['Threads']}[/cyan]")
+    console.print(f"Finish:  [cyan]{mpc['Finish']}[/cyan]")
+    console.print("-" * 40)
+    console.print("[bold]Note:[/bold]")
+    if mpc['Note']:
+        console.print(f"[yellow]{mpc['Note']}[/yellow]")
+    else:
+        console.print("[dim]No note[/dim]")
+    console.print("=" * 40)
+    print()
+    input("Press Enter to continue...")
+    mpcselect = 0
+    mympcs()
+
 
 # Add user process
 # NOTE: Adding the connected Mouthpiecer in field_40 does not yet work. We may need to retrieve the ID of the new account and then add that value with an additional call.
