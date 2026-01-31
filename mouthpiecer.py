@@ -5,6 +5,7 @@ import json                       # for handling JSON
 import getpass                    # provides a password input without revealing text
 from rich.console import Console  # rich terminal output
 from rich.table import Table      # rich tables
+from rich.panel import Panel      # rich panels for menus
 import questionary                # interactive prompts with autocomplete
 
 
@@ -73,12 +74,16 @@ FIELD_USER_PASSWORD = 'field_3'
 FIELD_USER_STATUS = 'field_4'
 FIELD_USER_ROLE = 'field_5'
 
+# Pagination settings
+PAGE_SIZE = 10
+
 # declare some vars
 token = ""
 with open('banner.txt', 'r') as bannerfile:
     banner = bannerfile.read()
 mpcselect = 0
 mouthpieces = []  # list of mouthpiece dicts from API
+current_page = 0  # for pagination
 
 
 # Login process
@@ -131,53 +136,48 @@ def logout():
 # Our Main Menu
 def mainmenu():
     clear_screen()
+    console.print(f"[yellow]{banner}[/yellow]")
     if token == "":
-        print()
-        print("You are not currently logged in...")
-        console.print(f"[yellow]{banner}[/yellow]")
-        print("[1] My mouthpieces")
-        print("-----------------------")
-        console.print("[green][6][/green] Log in")
-        print("[7] Log out")
-        console.print("[green][8][/green] Add a user")
-        print("-----------------------")
-        console.print("[green][0][/green] Exit to shell")
-        print()
+        menu_content = (
+            "[dim]Not logged in[/dim]\n\n"
+            "[dim][1][/dim] My mouthpieces\n"
+            "[green][6][/green] Log in\n"
+            "[dim][7][/dim] Log out\n"
+            "[green][8][/green] Add a user\n"
+            "[green][0][/green] Exit to shell"
+        )
     else:
-        print()
-        console.print(f"You are logged in as [blue]{logemail}[/blue]")
-        console.print(f"[yellow]{banner}[/yellow]")
-        console.print("[green][1][/green] My mouthpieces")
-        print("-----------------------")
-        print("[6] Log in")
-        console.print("[green][7][/green] Log out")
-        print("[8] Add a user")
-        print("-----------------------")
-        console.print("[green][0][/green] Exit to shell")
-        print()
+        menu_content = (
+            f"Logged in as [blue]{logemail}[/blue]\n\n"
+            "[green][1][/green] My mouthpieces\n"
+            "[dim][6][/dim] Log in\n"
+            "[green][7][/green] Log out\n"
+            "[dim][8][/dim] Add a user\n"
+            "[green][0][/green] Exit to shell"
+        )
+    console.print(Panel(menu_content, title="Main Menu", border_style="blue"))
+    print()
 
 
 # My Mouthpieces Menu
 def mympcsmenu():
     global mpcselect
     clear_screen()
-    print()
-    console.print(f"You are logged in as [blue]{logemail}[/blue]")
     console.print(f"[yellow]{banner}[/yellow]")
-    console.print(f"--- Mouthpieces for [blue]{logemail}[/blue] ---")
-    print()
     if mpcselect == 0:
-        console.print("[green][1][/green] Add mouthpiece               [green][3][/green] Edit mouthpiece")
-        console.print("[green][2][/green] Delete mouthpiece            [green][4][/green] View details")
-        console.print("[green][0][/green] Back to main menu")
-        print("------------------------------------------------------")
-        print()
-    if mpcselect == 1:
-        print("[1] Add mouthpiece               [3] Edit mouthpiece")
-        print("[2] Delete mouthpiece            [4] View details")
-        print("[0] Back to main menu")
-        print("------------------------------------------------------")
-        print()
+        menu_content = (
+            "[green][1][/green] Add mouthpiece      [green][3][/green] Edit mouthpiece\n"
+            "[green][2][/green] Delete mouthpiece   [green][4][/green] View details\n"
+            "[green][0][/green] Back to main menu"
+        )
+    else:
+        menu_content = (
+            "[dim][1][/dim] Add mouthpiece      [dim][3][/dim] Edit mouthpiece\n"
+            "[dim][2][/dim] Delete mouthpiece   [dim][4][/dim] View details\n"
+            "[dim][0][/dim] Back to main menu"
+        )
+    console.print(Panel(menu_content, title=f"Mouthpieces for [blue]{logemail}[/blue]", border_style="blue"))
+    print()
 
 
 # Menu for selecting a mouthpiece type
@@ -222,7 +222,7 @@ def addmpc():
         style=questionary.Style([("answer", "fg:green")])
     ).ask()
     if newmake is None:  # User pressed Ctrl+C
-        mympcs()
+        mympcs(refresh=False)
         return
     print()
     newmodel = input("Model: ")
@@ -296,19 +296,25 @@ def addmpc():
     print()
     newnote = input("Note (optional): ")
     print()
-    print("------------------------")
-    console.print(f"Make: [green]{newmake}[/green]")
-    console.print(f"Model: [green]{newmodel}[/green]")
-    console.print(f"Type: [green]{newtype}[/green]")
-    console.print(f"Threads: [green]{newthreads}[/green]")
-    console.print(f"Finish: [green]{newfinish}[/green]")
-    console.print(f"Note: [green]{newnote}[/green]")
-    print("------------------------")
+    summary = (
+        f"[bold]Make:[/bold] [green]{newmake}[/green]\n"
+        f"[bold]Model:[/bold] [green]{newmodel}[/green]\n"
+        f"[bold]Type:[/bold] [green]{newtype}[/green]\n"
+    )
+    if newtype != "one-piece":
+        summary += f"[bold]Threads:[/bold] [green]{newthreads}[/green]\n"
+    summary += f"[bold]Finish:[/bold] [green]{newfinish}[/green]"
+    if newnote:
+        summary += f"\n[bold]Note:[/bold] [green]{newnote}[/green]"
+    console.print(Panel(summary, title="New Mouthpiece", border_style="green"))
     print()
     while True:
-        console.print("Send to Knack? [green](y/n):[/green] ", end="")
+        console.print("Send to Knack? [green](Y/n):[/green] ", end="")
         conf = input().lower()
-        if conf in ("y", "n"):
+        if conf == "" or conf == "y":
+            conf = "y"
+            break
+        if conf == "n":
             break
         console.print("[red]Invalid Option[/red]")
         print()
@@ -324,22 +330,43 @@ def addmpc():
         else:
             console.print("[red]Error! There was a problem with your request.[/red] ", end="")
             input("Press Enter to continue...")
-            mympcs()
+            mympcs(refresh=False)
     else:
         mpcselect = 0
-        mympcs()
+        mympcs(refresh=False)
 
 
 # My mouthpieces process
-def mympcs():
-    global mouthpieces
+def mympcs(refresh=True):
+    global mouthpieces, current_page
     if token == "":
         input("Please log in first. Press Enter...")
     else:
+        if refresh:
+            fetchmpcs()
+            current_page = 0
         mympcsmenu()
         listmpcs()
+
+        total_pages = (len(mouthpieces) + PAGE_SIZE - 1) // PAGE_SIZE if mouthpieces else 1
+
         while True:
             selection = input("Make a menu selection: ")
+
+            # Handle pagination
+            if selection == "<":
+                if current_page > 0:
+                    current_page -= 1
+                mympcsmenu()
+                listmpcs()
+                continue
+            elif selection == ">":
+                if current_page < total_pages - 1:
+                    current_page += 1
+                mympcsmenu()
+                listmpcs()
+                continue
+
             try:
                 selection = (int(selection))
                 if selection not in (1, 2, 3, 4, 0):
@@ -361,8 +388,8 @@ def mympcs():
             mainmenu()
 
 
-# List mouthpieces process
-def listmpcs():
+# Fetch mouthpieces from API (separate from display)
+def fetchmpcs():
     global mouthpieces
     api_url = "https://api.knack.com/v1/pages/scene_18/views/view_18/records"
     headers = {"content-type":"application/json", "X-Knack-Application-Id": KNACK_APP_ID, "X-Knack-REST-API-KEY":"knack", "Authorization":token}
@@ -383,7 +410,44 @@ def listmpcs():
             'Note': record.get(FIELD_NOTE, ''),
         })
 
-    # Build rich table
+
+# Generate collection stats
+def get_stats():
+    if not mouthpieces:
+        return "No mouthpieces yet"
+
+    total = len(mouthpieces)
+    unique_makes = len(set(mpc['Make'] for mpc in mouthpieces))
+
+    # Count by type
+    type_counts = {}
+    for mpc in mouthpieces:
+        t = mpc['Type']
+        type_counts[t] = type_counts.get(t, 0) + 1
+
+    type_str = ", ".join(f"{count} {typ}" for typ, count in type_counts.items())
+
+    return f"[bold]{total}[/bold] mouthpieces | [bold]{unique_makes}[/bold] makes | {type_str}"
+
+
+# List mouthpieces process (with pagination)
+def listmpcs():
+    global current_page
+
+    total = len(mouthpieces)
+    total_pages = (total + PAGE_SIZE - 1) // PAGE_SIZE if total > 0 else 1
+
+    # Ensure current_page is valid
+    if current_page >= total_pages:
+        current_page = total_pages - 1
+    if current_page < 0:
+        current_page = 0
+
+    # Show stats
+    console.print(Panel(get_stats(), title="Collection Stats", border_style="magenta"))
+    print()
+
+    # Build rich table for current page
     table = Table()
     table.add_column("Index", style="dim")
     table.add_column("Make")
@@ -393,21 +457,30 @@ def listmpcs():
     table.add_column("Finish")
     table.add_column("Note", justify="center")
 
+    start_idx = current_page * PAGE_SIZE
+    end_idx = min(start_idx + PAGE_SIZE, total)
+
     style = "green" if mpcselect == 1 else None
-    for mpc in mouthpieces:
+    for mpc in mouthpieces[start_idx:end_idx]:
         has_note = "X" if mpc['Note'] else ""
+        # Hide threads for one-piece mouthpieces
+        threads_display = "-" if mpc['Type'] == "one-piece" else mpc['Threads']
         table.add_row(
             str(mpc['index']),
             mpc['Make'],
             mpc['Model'],
             mpc['Type'],
-            mpc['Threads'],
+            threads_display,
             mpc['Finish'],
             has_note,
             style=style
         )
 
     console.print(table)
+
+    # Show pagination info if more than one page
+    if total_pages > 1:
+        console.print(f"\n[dim]Page {current_page + 1} of {total_pages} | [/dim][green][<][/green][dim] prev [/dim][green][>][/green][dim] next[/dim]")
     print()
 
 
@@ -417,7 +490,7 @@ def delmpc():
         print()
         console.print("[red]Add another mouthpiece to delete.[/red] You need at least one in place. ", end="")
         input("Press Enter to continue...")
-        mympcs()
+        mympcs(refresh=False)
     else:
         global mpcselect
         mpcselect = 1
@@ -439,9 +512,12 @@ def delmpc():
         print()
         mpc = mouthpieces[selection]
         while True:
-            console.print(f"[red]Are you sure you want to delete this[/red] {mpc['Make']} {mpc['Model']}? [green](y/n):[/green] ", end="")
+            console.print(f"[red]Are you sure you want to delete this[/red] {mpc['Make']} {mpc['Model']}? [green](y/N):[/green] ", end="")
             conf = input().lower()
-            if conf in ("y", "n"):
+            if conf == "" or conf == "n":
+                conf = "n"
+                break
+            if conf == "y":
                 break
             console.print("[red]Invalid Option[/red]")
             print()
@@ -454,15 +530,15 @@ def delmpc():
             if response.status_code == 200:
                 input("Success! Press Enter to continue...")
                 mpcselect = 0
-                mympcs()
+                mympcs()  # refresh=True to show updated list
             else:
                 console.print("[red]Error! There was a problem with your request.[/red] ", end="")
                 input("Press Enter to continue...")
                 mpcselect = 0
-                mympcs()
+                mympcs(refresh=False)
         else:
             mpcselect = 0
-            mympcs()
+            mympcs(refresh=False)
 
 
 # Edit mouthpiece process
@@ -499,7 +575,7 @@ def editmpc():
     ).ask()
     if newmake is None:  # User pressed Ctrl+C
         mpcselect = 0
-        mympcs()
+        mympcs(refresh=False)
         return
     print()
 
@@ -565,28 +641,39 @@ def editmpc():
     newnote = input(f"Note ({current_note_display}): ") or mpc['Note']
 
     print()
-    print("OLD---------------------")
-    console.print(f"Make: [red]{mpc['Make']}[/red]")
-    console.print(f"Model: [red]{mpc['Model']}[/red]")
-    console.print(f"Type: [red]{mpc['Type']}[/red]")
-    console.print(f"Threads: [red]{mpc['Threads']}[/red]")
-    console.print(f"Finish: [red]{mpc['Finish']}[/red]")
-    console.print(f"Note: [red]{mpc['Note']}[/red]")
-    print("---------------------OLD")
+    old_summary = (
+        f"[bold]Make:[/bold] [red]{mpc['Make']}[/red]\n"
+        f"[bold]Model:[/bold] [red]{mpc['Model']}[/red]\n"
+        f"[bold]Type:[/bold] [red]{mpc['Type']}[/red]\n"
+    )
+    if mpc['Type'] != "one-piece":
+        old_summary += f"[bold]Threads:[/bold] [red]{mpc['Threads']}[/red]\n"
+    old_summary += f"[bold]Finish:[/bold] [red]{mpc['Finish']}[/red]"
+    if mpc['Note']:
+        old_summary += f"\n[bold]Note:[/bold] [red]{mpc['Note']}[/red]"
+    console.print(Panel(old_summary, title="OLD", border_style="red"))
+
     print()
-    print("NEW---------------------")
-    console.print(f"Make: [green]{newmake}[/green]")
-    console.print(f"Model: [green]{newmodel}[/green]")
-    console.print(f"Type: [green]{newtype}[/green]")
-    console.print(f"Threads: [green]{newthreads}[/green]")
-    console.print(f"Finish: [green]{newfinish}[/green]")
-    console.print(f"Note: [green]{newnote}[/green]")
-    print("---------------------NEW")
+    new_summary = (
+        f"[bold]Make:[/bold] [green]{newmake}[/green]\n"
+        f"[bold]Model:[/bold] [green]{newmodel}[/green]\n"
+        f"[bold]Type:[/bold] [green]{newtype}[/green]\n"
+    )
+    if newtype != "one-piece":
+        new_summary += f"[bold]Threads:[/bold] [green]{newthreads}[/green]\n"
+    new_summary += f"[bold]Finish:[/bold] [green]{newfinish}[/green]"
+    if newnote:
+        new_summary += f"\n[bold]Note:[/bold] [green]{newnote}[/green]"
+    console.print(Panel(new_summary, title="NEW", border_style="green"))
+
     print()
     while True:
-        console.print("Save changes? [green](y/n):[/green] ", end="")
+        console.print("Save changes? [green](Y/n):[/green] ", end="")
         conf = input().lower()
-        if conf in ("y", "n"):
+        if conf == "" or conf == "y":
+            conf = "y"
+            break
+        if conf == "n":
             break
         console.print("[red]Invalid Option[/red]")
         print()
@@ -600,15 +687,15 @@ def editmpc():
         if response.status_code == 200:
             input("Success! Press Enter to continue...")
             mpcselect = 0
-            mympcs()
+            mympcs()  # refresh=True to show updated list
         else:
             console.print("[red]Error! There was a problem with your request.[/red] ", end="")
             input("Press Enter to continue...")
             mpcselect = 0
-            mympcs()
+            mympcs(refresh=False)
     else:
         mpcselect = 0
-        mympcs()
+        mympcs(refresh=False)
 
 # View mouthpiece details
 def viewmpc():
@@ -631,25 +718,25 @@ def viewmpc():
         break
     print()
     mpc = mouthpieces[selection]
-    console.print("=" * 40)
-    console.print(f"[bold]Mouthpiece Details[/bold]")
-    console.print("=" * 40)
-    console.print(f"Make:    [cyan]{mpc['Make']}[/cyan]")
-    console.print(f"Model:   [cyan]{mpc['Model']}[/cyan]")
-    console.print(f"Type:    [cyan]{mpc['Type']}[/cyan]")
-    console.print(f"Threads: [cyan]{mpc['Threads']}[/cyan]")
-    console.print(f"Finish:  [cyan]{mpc['Finish']}[/cyan]")
-    console.print("-" * 40)
-    console.print("[bold]Note:[/bold]")
+    details = (
+        f"[bold]Make:[/bold]    [cyan]{mpc['Make']}[/cyan]\n"
+        f"[bold]Model:[/bold]   [cyan]{mpc['Model']}[/cyan]\n"
+        f"[bold]Type:[/bold]    [cyan]{mpc['Type']}[/cyan]\n"
+    )
+    if mpc['Type'] != "one-piece":
+        details += f"[bold]Threads:[/bold] [cyan]{mpc['Threads']}[/cyan]\n"
+    details += f"[bold]Finish:[/bold]  [cyan]{mpc['Finish']}[/cyan]"
+
     if mpc['Note']:
-        console.print(f"[yellow]{mpc['Note']}[/yellow]")
+        details += f"\n\n[bold]Note:[/bold]\n[yellow]{mpc['Note']}[/yellow]"
     else:
-        console.print("[dim]No note[/dim]")
-    console.print("=" * 40)
+        details += "\n\n[bold]Note:[/bold]\n[dim]No note[/dim]"
+
+    console.print(Panel(details, title="Mouthpiece Details", border_style="cyan"))
     print()
     input("Press Enter to continue...")
     mpcselect = 0
-    mympcs()
+    mympcs(refresh=False)
 
 
 # Add user process

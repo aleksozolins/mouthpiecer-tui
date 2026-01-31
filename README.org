@@ -60,9 +60,10 @@ export KNACK_API_KEY="your-api-key"
 ** High Value
 - [X] Searchable Make selection - show the 67 manufacturers from Knack as a numbered list or fuzzy search instead of free text input
 - [ ] Browse other mouthpiecers - view other users' collections to scope out potential trades
-- [ ] Collection stats - show summary when entering My Mouthpieces (e.g. "12 mouthpieces | 5 makes | 8 one-piece, 3 cups, 1 rim")
+- [X] Collection stats - show summary when entering My Mouthpieces (e.g. "12 mouthpieces | 5 makes | 8 one-piece, 3 cups, 1 rim")
+- [X] Pagination - paginate mouthpiece list to avoid scrolling issues
 
 ** Polish
 - [ ] Quick duplicate - select an existing mouthpiece as a template for adding a new one
 - [ ] Sorting - sort the table by Make, Type, etc. with a keystroke
-- [ ] Rich panels - use box-drawing borders for menus instead of dashes
+- [X] Rich panels - use box-drawing borders for menus instead of dashes
