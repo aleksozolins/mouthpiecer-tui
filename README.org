@@ -40,6 +40,7 @@ To exit the virtual environment after quitting:
 
 - [[https://docs.python-requests.org/][requests]]
 - [[https://rich.readthedocs.io/][rich]]
+- [[https://questionary.readthedocs.io/][questionary]]
 
 * Configuration (Optional)
 
@@ -50,4 +51,18 @@ export KNACK_APP_ID="your-app-id"
 export KNACK_API_KEY="your-api-key"
 #+end_src
 
+* Known Issues
 
+- After adding a new user, if you elect not to save your first mouthpiece with [n], an error is returned and the program terminates.
+
+* Todos
+
+** High Value
+- [X] Searchable Make selection - show the 67 manufacturers from Knack as a numbered list or fuzzy search instead of free text input
+- [ ] Browse other mouthpiecers - view other users' collections to scope out potential trades
+- [ ] Collection stats - show summary when entering My Mouthpieces (e.g. "12 mouthpieces | 5 makes | 8 one-piece, 3 cups, 1 rim")
+
+** Polish
+- [ ] Quick duplicate - select an existing mouthpiece as a template for adding a new one
+- [ ] Sorting - sort the table by Make, Type, etc. with a keystroke
+- [ ] Rich panels - use box-drawing borders for menus instead of dashes
