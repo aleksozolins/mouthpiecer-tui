@@ -16,7 +16,7 @@ Ultimately, the tui should exactly mirror the feature-set of the web front end.
 
 - [X] macOS
 - [X] Linux
-- [ ] Windows (not currently supported)
+- [X] Windows
 
 * Installation Instructions (venv)
 
@@ -32,50 +32,22 @@ To run the program:
 
 ~python3 mouthpiecer.py~
 
-To exit the virtual environment after quitting
+To exit the virtual environment after quitting:
 
 ~deactivate~
 
 * Dependencies
 
-For now, any dependencies have to be installed manually with =pip=.
+- [[https://docs.python-requests.org/][requests]]
+- [[https://rich.readthedocs.io/][rich]]
 
-- requests
-- [[https://pandas.pydata.org/][pandas - Python Data Analisys Library]]
-- termcolor
+* Configuration (Optional)
 
-* Known issues
+The app uses default Knack API credentials. To override them, set environment variables:
 
-- [ ] After adding a new user, if you elect not to save your first mouthpiece with [n], an error is returned and the program terminates.
-- [RESOLVED] When selecting a mouthpiece to delete, if an invalid selection is made, the program will terminate with an error.
-- [RESOLVED] While adding a mouthpiece, if you enter an invalid menu selection for type, threads, or finish, and then press "0" at the "My mouthpieces" menu, something strange happens.
+#+begin_src shell
+export KNACK_APP_ID="your-app-id"
+export KNACK_API_KEY="your-api-key"
+#+end_src
 
-* Todos
 
-- [ ] Installation shell script
-- [ ] Run mouthpiecer with shebang
-- [ ] Colorize all successes to blue
-- [ ] Increase spacing between dataframe columns
-- [ ] Change "Make" selection to choice by int
-- [ ] Prefill inputs during edit operation
-- [ ] Move project to org using babel
-- [ ] Assign connection from account to mouthpiecer when adding new user
-- [ ] Pagination
-- [ ] Add note to mouthpiece
-- [ ] View mouthpiece details option with note
-- [X] Edit mouthpiece operation
-- [X] Add conditional threading input for adding mouthpiece
-- [X] Error when a non-integer value is entered for an integer menu
-- [X] Add thread field to My Mouthpieces view
-- [X] Problem listing mouthpieces when there are none
-  reference [[https://stackoverflow.com/questions/15943769/how-do-i-get-the-row-count-of-a-pandas-dataframe][this]]
-- [X] Add confirm prompts to operations
-- [X] Normalize spacing of all operations
-- [X] Spruce up the interface with more color
-- [X] Colored output
-- [X] View based calls (as opposed to object based calls) once logged in
-- [X] Error handling
-- [X] Format incoming JSON into table (list mouthpieces)
-- [X] Add log out option
-- [X] Do not allow mouthpiece operation if not logged in
-- [X] Logged in indicator (you are logged in as...)

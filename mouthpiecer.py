@@ -3,14 +3,42 @@ import os                         # for clearing the screen and other OS level c
 import requests                   # for communicating via API
 import json                       # for handling JSON
 import getpass                    # provides a password input without revealing text
-import pandas as pd               # for tabulating JSON
-from termcolor import colored     # colored output in the terminal
+from rich.console import Console  # rich terminal output
+from rich.table import Table      # rich tables
+
+
+def clear_screen():
+    """Clear the terminal screen (cross-platform)."""
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+
+# Rich console for colored output
+console = Console()
+
+# Knack API configuration (load from environment variables)
+KNACK_APP_ID = os.environ.get('KNACK_APP_ID', '60241522a16be4001b611249')
+KNACK_API_KEY = os.environ.get('KNACK_API_KEY', '82d8170b-0661-4462-8dbb-3a589abdfc39')
+
+# Knack field ID mappings (mouthpiece object)
+FIELD_MAKE = 'field_17'
+FIELD_MODEL = 'field_16'
+FIELD_TYPE = 'field_24'
+FIELD_THREADS = 'field_25'
+FIELD_FINISH = 'field_26'
+
+# Knack field ID mappings (user object)
+FIELD_USER_NAME = 'field_1'
+FIELD_USER_EMAIL = 'field_2'
+FIELD_USER_PASSWORD = 'field_3'
+FIELD_USER_STATUS = 'field_4'
+FIELD_USER_ROLE = 'field_5'
 
 # declare some vars
 token = ""
-bannerfile = open('banner.txt', 'r')
-banner = bannerfile.read()
+with open('banner.txt', 'r') as bannerfile:
+    banner = bannerfile.read()
 mpcselect = 0
+mouthpieces = []  # list of mouthpiece dicts from API
 
 
 # Login process
@@ -24,9 +52,9 @@ def login():
         print()
         logemail = input("Email: ")
         passwd = getpass.getpass("Password: ")
-        api_url = "https://api.knack.com/v1/applications/60241522a16be4001b611249/session"
+        api_url = f"https://api.knack.com/v1/applications/{KNACK_APP_ID}/session"
         creds = {"email": logemail, "password": passwd}
-        headers = {"content-type":"application/json", "X-Knack-REST-API-KEY":"82d8170b-0661-4462-8dbb-3a589abdfc39"}
+        headers = {"content-type":"application/json", "X-Knack-REST-API-KEY": KNACK_API_KEY}
         response = requests.post(api_url, data=json.dumps(creds), headers=headers)
         jresponse = response.json()
         if response.status_code == 200:
@@ -35,15 +63,16 @@ def login():
             input("You have been logged in. Press Enter to continue...")
         else:
             print()
-            input(colored("Invalid credentials. ", 'red') + "Press Enter to continue...")
+            console.print("[red]Invalid credentials.[/red] ", end="")
+            input("Press Enter to continue...")
 
 
 # Login process for new users
 def loginnewusr():
     global token
-    api_url = "https://api.knack.com/v1/applications/60241522a16be4001b611249/session"
+    api_url = f"https://api.knack.com/v1/applications/{KNACK_APP_ID}/session"
     creds = {"email": newusremail, "password": newusrpasswd1}
-    headers = {"content-type":"application/json", "X-Knack-REST-API-KEY":"82d8170b-0661-4462-8dbb-3a589abdfc39"}
+    headers = {"content-type":"application/json", "X-Knack-REST-API-KEY": KNACK_API_KEY}
     response = requests.post(api_url, data=json.dumps(creds), headers=headers)
     jresponse = response.json()
     token = jresponse['session']['user']['token']
@@ -61,45 +90,45 @@ def logout():
 
 # Our Main Menu
 def mainmenu():
-    os.system('clear')
+    clear_screen()
     if token == "":
         print()
         print("You are not currently logged in...")
-        print(colored(banner, 'yellow'))
+        console.print(f"[yellow]{banner}[/yellow]")
         print("[1] My mouthpieces")
         print("-----------------------")
-        print(colored("[6] ", 'green') + ("Log in"))
+        console.print("[green][6][/green] Log in")
         print("[7] Log out")
-        print(colored("[8] ", 'green') + ("Add a user"))
+        console.print("[green][8][/green] Add a user")
         print("-----------------------")
-        print(colored("[0] ", 'green') + ("Exit to shell"))
+        console.print("[green][0][/green] Exit to shell")
         print()
     else:
         print()
-        print("You are logged in as " + colored(logemail, 'blue'))
-        print(colored(banner, 'yellow'))
-        print(colored("[1] ", 'green') + ("My mouthpieces"))
+        console.print(f"You are logged in as [blue]{logemail}[/blue]")
+        console.print(f"[yellow]{banner}[/yellow]")
+        console.print("[green][1][/green] My mouthpieces")
         print("-----------------------")
         print("[6] Log in")
-        print(colored("[7] ", 'green') + ("Log out"))
+        console.print("[green][7][/green] Log out")
         print("[8] Add a user")
         print("-----------------------")
-        print(colored("[0] ", 'green') + ("Exit to shell"))
+        console.print("[green][0][/green] Exit to shell")
         print()
 
 
 # My Mouthpieces Menu
 def mympcsmenu():
     global mpcselect
-    os.system('clear')
+    clear_screen()
     print()
-    print("You are logged in as " + colored(logemail, 'blue'))
-    print(colored(banner, 'yellow'))
-    print("--- Mouthpieces for " + colored(logemail, 'blue') + " ---")
+    console.print(f"You are logged in as [blue]{logemail}[/blue]")
+    console.print(f"[yellow]{banner}[/yellow]")
+    console.print(f"--- Mouthpieces for [blue]{logemail}[/blue] ---")
     print()
     if mpcselect == 0:
-        print(colored("[1] ", 'green') + ("Add mouthpiece               ") + (colored("[3] ", 'green') + ("Edit mouthpiece")))
-        print(colored("[2] ", 'green') + ("Delete mouthpiece            ") + (colored("[0] ", 'green') + ("Back to main menu")))
+        console.print("[green][1][/green] Add mouthpiece               [green][3][/green] Edit mouthpiece")
+        console.print("[green][2][/green] Delete mouthpiece            [green][0][/green] Back to main menu")
         print("------------------------------------------------------")
         print()
     if mpcselect == 1:
@@ -112,32 +141,32 @@ def mympcsmenu():
 # Menu for selecting a mouthpiece type
 def mpctypemenu():
     print()
-    print(colored("[1] ", 'green') + ("one-piece"))
-    print(colored("[2] ", 'green') + ("two-piece"))
-    print(colored("[3] ", 'green') + ("cup"))
-    print(colored("[4] ", 'green') + ("rim"))
+    console.print("[green][1][/green] one-piece")
+    console.print("[green][2][/green] two-piece")
+    console.print("[green][3][/green] cup")
+    console.print("[green][4][/green] rim")
     print()
 
 
 # Menu for selecting mouthpiece threads
 def mpcthreadsmenu():
     print()
-    print(colored("[1] ", 'green') + ("standard"))
-    print(colored("[2] ", 'green') + ("metric"))
-    print(colored("[3] ", 'green') + ("other"))
+    console.print("[green][1][/green] standard")
+    console.print("[green][2][/green] metric")
+    console.print("[green][3][/green] other")
     print()
 
 
 # Menu for selecting a mouthpiece finish
 def mpcfinishmenu():
     print()
-    print(colored("[1] ", 'green') + ("silver plated"))
-    print(colored("[2] ", 'green') + ("gold plated"))
-    print(colored("[3] ", 'green') + ("brass"))
-    print(colored("[4] ", 'green') + ("nickel"))
-    print(colored("[5] ", 'green') + ("stainless"))
-    print(colored("[6] ", 'green') + ("bronze"))
-    print(colored("[7] ", 'green') + ("plastic"))
+    console.print("[green][1][/green] silver plated")
+    console.print("[green][2][/green] gold plated")
+    console.print("[green][3][/green] brass")
+    console.print("[green][4][/green] nickel")
+    console.print("[green][5][/green] stainless")
+    console.print("[green][6][/green] bronze")
+    console.print("[green][7][/green] plastic")
     print()
 
 
@@ -154,8 +183,8 @@ def addmpc():
             option = (int(option))
             if option not in (1, 2, 3, 4):
                 raise ValueError
-        except:
-            print(colored("Invalid Option", 'red'))
+        except ValueError:
+            console.print("[red]Invalid Option[/red]")
             print()
             continue
         break
@@ -175,8 +204,8 @@ def addmpc():
             try:
                 if option not in ("1", "2", "3", ""):
                     raise ValueError
-            except:
-                print(colored("Invalid Option", 'red'))
+            except ValueError:
+                console.print("[red]Invalid Option[/red]")
                 print()
                 continue
             break
@@ -195,8 +224,8 @@ def addmpc():
             option = (int(option))
             if option not in (1, 2, 3, 4, 5, 6, 7):
                 raise ValueError
-        except:
-            print(colored("Invalid Option", 'red'))
+        except ValueError:
+            console.print("[red]Invalid Option[/red]")
             print()
             continue
         break
@@ -216,34 +245,36 @@ def addmpc():
         newfinish = "plastic"
     print()
     print("------------------------")
-    print(("Make: ") + colored(newmake, 'green'))
-    print(("Model: ") + colored(newmodel, 'green'))
-    print(("Type: ") + colored(newtype, 'green'))
-    print(("Threads: ") + colored(newthreads, 'green'))
-    print(("Finish: ") + colored(newfinish, 'green'))
+    console.print(f"Make: [green]{newmake}[/green]")
+    console.print(f"Model: [green]{newmodel}[/green]")
+    console.print(f"Type: [green]{newtype}[/green]")
+    console.print(f"Threads: [green]{newthreads}[/green]")
+    console.print(f"Finish: [green]{newfinish}[/green]")
     print("------------------------")
     print()
     while True:
-        conf = input("Send to Knack? " + colored("[y] [n]: ", 'green'))
+        console.print("Send to Knack? [green][y] [n]:[/green] ", end="")
+        conf = input()
         try:
             if conf not in ("y", "n"):
                 raise ValueError
-        except:
-            print(colored("Invalid Option", 'red'))
+        except ValueError:
+            console.print("[red]Invalid Option[/red]")
             print()
             continue
         break
     if conf == "y":
         api_url = "https://api.knack.com/v1/pages/scene_18/views/view_18/records"
-        mouthpiece = {"field_17": newmake, "field_24": newtype, "field_16": newmodel, "field_25": newthreads, "field_26": newfinish}
-        headers = {"content-type":"application/json", "X-Knack-Application-Id":"60241522a16be4001b611249", "X-Knack-REST-API-KEY":"knack", "Authorization":token}
+        mouthpiece = {FIELD_MAKE: newmake, FIELD_TYPE: newtype, FIELD_MODEL: newmodel, FIELD_THREADS: newthreads, FIELD_FINISH: newfinish}
+        headers = {"content-type":"application/json", "X-Knack-Application-Id": KNACK_APP_ID, "X-Knack-REST-API-KEY":"knack", "Authorization":token}
         response = requests.post(api_url, data=json.dumps(mouthpiece), headers=headers)
         print()
         if response.status_code == 200:
             input("Success! Press Enter to continue...")
             mympcs()
         else:
-            input(colored("Error! There was a problem with your request. ", 'red') + ("Press Enter to continue..."))
+            console.print("[red]Error! There was a problem with your request.[/red] ", end="")
+            input("Press Enter to continue...")
             mympcs()
     else:
         mpcselect = 0
@@ -252,7 +283,7 @@ def addmpc():
 
 # My mouthpieces process
 def mympcs():
-    global df
+    global mouthpieces
     if token == "":
         input("Please log in first. Press Enter...")
     else:
@@ -264,8 +295,8 @@ def mympcs():
                 selection = (int(selection))
                 if selection not in (1, 2, 3, 0):
                     raise ValueError
-            except:
-                print(colored("Invalid Option", 'red'))
+            except ValueError:
+                console.print("[red]Invalid Option[/red]")
                 print()
                 continue
             break
@@ -281,32 +312,56 @@ def mympcs():
 
 # List mouthpieces process
 def listmpcs():
-    global df
+    global mouthpieces
     api_url = "https://api.knack.com/v1/pages/scene_18/views/view_18/records"
-    headers = {"content-type":"application/json", "X-Knack-Application-Id":"60241522a16be4001b611249", "X-Knack-REST-API-KEY":"knack", "Authorization":token}
+    headers = {"content-type":"application/json", "X-Knack-Application-Id": KNACK_APP_ID, "X-Knack-REST-API-KEY":"knack", "Authorization":token}
     response = requests.get(api_url, headers=headers)
     jresponse = response.json()
-    pd.set_option('display.max_rows', None)
-    df = pd.json_normalize(jresponse['records'])
-    df['index1'] = df.index
-    df.drop(df.columns[[2, 4, 6, 8, 10, 11, 12]], axis=1, inplace=True)
-    df.columns = ['id', 'Make', 'Model', 'Type', 'Threads', 'Finish', 'Index']
-    df = df.reindex(columns=['Index', 'Make', 'Model', 'Type', 'Threads', 'Finish', 'id'])
-    if mpcselect == 0:
-        df2 = df.to_string(index=False)
-        print(df2)
-        print()
-    elif mpcselect == 1:
-        df2 = colored(df.to_string(index=False), 'green')
-        print(df2)
-        print()
+
+    # Store mouthpieces as list of dicts
+    mouthpieces = []
+    for idx, record in enumerate(jresponse.get('records', [])):
+        mouthpieces.append({
+            'index': idx,
+            'id': record.get('id', ''),
+            'Make': record.get(FIELD_MAKE, ''),
+            'Model': record.get(FIELD_MODEL, ''),
+            'Type': record.get(FIELD_TYPE, ''),
+            'Threads': record.get(FIELD_THREADS, ''),
+            'Finish': record.get(FIELD_FINISH, ''),
+        })
+
+    # Build rich table
+    table = Table()
+    table.add_column("Index", style="dim")
+    table.add_column("Make")
+    table.add_column("Model")
+    table.add_column("Type")
+    table.add_column("Threads")
+    table.add_column("Finish")
+
+    style = "green" if mpcselect == 1 else None
+    for mpc in mouthpieces:
+        table.add_row(
+            str(mpc['index']),
+            mpc['Make'],
+            mpc['Model'],
+            mpc['Type'],
+            mpc['Threads'],
+            mpc['Finish'],
+            style=style
+        )
+
+    console.print(table)
+    print()
 
 
 # Delete mouthpiece process
 def delmpc():
-    if len(df.index) == 1:
+    if len(mouthpieces) == 1:
         print()
-        input(colored("Add another mouthpiece to delete. ", 'red') + ("You need at least one in place. Press Enter to continue..."))
+        console.print("[red]Add another mouthpiece to delete.[/red] You need at least one in place. ", end="")
+        input("Press Enter to continue...")
         mympcs()
     else:
         global mpcselect
@@ -319,28 +374,30 @@ def delmpc():
             selection = input("Select a mouthpiece by Index to delete: ")
             try:
                 selection = (int(selection))
-                if selection not in (range(0, len(df.index))):
+                if selection not in range(0, len(mouthpieces)):
                     raise ValueError
-            except:
-                print(colored("Invalid Option", 'red'))
+            except ValueError:
+                console.print("[red]Invalid Option[/red]")
                 print()
                 continue
             break
         print()
+        mpc = mouthpieces[selection]
         while True:
-            conf = input(colored("Are you sure you want to delete this ", 'red') + (df.iloc[selection]['Make']) + (" ") + (df.iloc[selection]['Model']) + (" ") + colored("[y] [n]: ", 'green'))
+            console.print(f"[red]Are you sure you want to delete this[/red] {mpc['Make']} {mpc['Model']} [green][y] [n]:[/green] ", end="")
+            conf = input()
             try:
                 if conf not in ("y", "n"):
                     raise ValueError
-            except:
-                print(colored("Invalid Option", 'red'))
+            except ValueError:
+                console.print("[red]Invalid Option[/red]")
                 print()
                 continue
             break
         if conf == "y":
-            delid = df.iloc[selection]['id']
+            delid = mpc['id']
             api_url = "https://api.knack.com/v1/pages/scene_18/views/view_18/records/" + delid
-            headers = {"content-type":"application/json", "X-Knack-Application-Id":"60241522a16be4001b611249", "X-Knack-REST-API-KEY":"knack", "Authorization":token}
+            headers = {"content-type":"application/json", "X-Knack-Application-Id": KNACK_APP_ID, "X-Knack-REST-API-KEY":"knack", "Authorization":token}
             response = requests.delete(api_url, headers=headers)
             print()
             if response.status_code == 200:
@@ -348,7 +405,8 @@ def delmpc():
                 mpcselect = 0
                 mympcs()
             else:
-                input(colored("Error! There was a problem with your request. ", 'red') + ("Press Enter to continue..."))
+                console.print("[red]Error! There was a problem with your request.[/red] ", end="")
+                input("Press Enter to continue...")
                 mpcselect = 0
                 mympcs()
         else:
@@ -368,26 +426,27 @@ def editmpc():
         selection = input("Select a mouthpiece by Index to edit: ")
         try:
             selection = (int(selection))
-            if selection not in (range(0, len(df.index))):
+            if selection not in range(0, len(mouthpieces)):
                 raise ValueError
-        except:
-            print(colored("Invalid Option", 'red'))
+        except ValueError:
+            console.print("[red]Invalid Option[/red]")
             print()
             continue
         break
     print()
-    newmake = input(("Make (" + df.iloc[selection]['Make'] + "): "))
+    mpc = mouthpieces[selection]
+    newmake = input(f"Make ({mpc['Make']}): ")
     print()
-    newmodel = input(("Model (" + df.iloc[selection]['Model'] + "): "))
+    newmodel = input(f"Model ({mpc['Model']}): ")
     mpctypemenu()
     while True:
-        option = input(("Type (" + df.iloc[selection]['Type'] + "): "))
+        option = input(f"Type ({mpc['Type']}): ")
         try:
             option = (int(option))
             if option not in (1, 2, 3, 4):
                 raise ValueError
-        except:
-            print(colored("Invalid Option", 'red'))
+        except ValueError:
+            console.print("[red]Invalid Option[/red]")
             print()
             continue
         break
@@ -403,12 +462,12 @@ def editmpc():
     if newtype != "one-piece":
         mpcthreadsmenu()
         while True:
-            option = input(("Threads (" + df.iloc[selection]['Threads'] + "): "))
+            option = input(f"Threads ({mpc['Threads']}): ")
             try:
                 if option not in ("1", "2", "3", ""):
                     raise ValueError
-            except:
-                print(colored("Invalid Option", 'red'))
+            except ValueError:
+                console.print("[red]Invalid Option[/red]")
                 print()
                 continue
             break
@@ -422,13 +481,13 @@ def editmpc():
             newthreads = ""
     mpcfinishmenu()
     while True:
-        option = input(("Finish (" + df.iloc[selection]['Finish'] + "): "))
+        option = input(f"Finish ({mpc['Finish']}): ")
         try:
             option = (int(option))
             if option not in (1, 2, 3, 4, 5, 6, 7):
                 raise ValueError
-        except:
-            print(colored("Invalid Option", 'red'))
+        except ValueError:
+            console.print("[red]Invalid Option[/red]")
             print()
             continue
         break
@@ -448,36 +507,37 @@ def editmpc():
         newfinish = "plastic"
     print()
     print("OLD---------------------")
-    print(("Make: ") + colored(df.iloc[selection]['Make'], 'red'))
-    print(("Model: ") + colored(df.iloc[selection]['Model'], 'red'))
-    print(("Type: ") + colored(df.iloc[selection]['Type'], 'red'))
-    print(("Threads: ") + colored(df.iloc[selection]['Threads'], 'red'))
-    print(("Finish: ") + colored(df.iloc[selection]['Finish'], 'red'))
+    console.print(f"Make: [red]{mpc['Make']}[/red]")
+    console.print(f"Model: [red]{mpc['Model']}[/red]")
+    console.print(f"Type: [red]{mpc['Type']}[/red]")
+    console.print(f"Threads: [red]{mpc['Threads']}[/red]")
+    console.print(f"Finish: [red]{mpc['Finish']}[/red]")
     print("---------------------OLD")
     print()
     print("NEW---------------------")
-    print(("Make: ") + colored(newmake, 'green'))
-    print(("Model: ") + colored(newmodel, 'green'))
-    print(("Type: ") + colored(newtype, 'green'))
-    print(("Threads: ") + colored(newthreads, 'green'))
-    print(("Finish: ") + colored(newfinish, 'green'))
+    console.print(f"Make: [green]{newmake}[/green]")
+    console.print(f"Model: [green]{newmodel}[/green]")
+    console.print(f"Type: [green]{newtype}[/green]")
+    console.print(f"Threads: [green]{newthreads}[/green]")
+    console.print(f"Finish: [green]{newfinish}[/green]")
     print("---------------------NEW")
     print()
     while True:
-        conf = input("Save changes? " + colored("[y] [n]: ", 'green'))
+        console.print("Save changes? [green][y] [n]:[/green] ", end="")
+        conf = input()
         try:
             if conf not in ("y", "n"):
                 raise ValueError
-        except:
-            print(colored("Invalid Option", 'red'))
+        except ValueError:
+            console.print("[red]Invalid Option[/red]")
             print()
             continue
         break
     if conf == "y":
-        editid = df.iloc[selection]['id']
+        editid = mpc['id']
         api_url = "https://api.knack.com/v1/pages/scene_18/views/view_18/records/" + editid
-        mouthpiece = {"field_17": newmake, "field_24": newtype, "field_16": newmodel, "field_25": newthreads, "field_26": newfinish}
-        headers = {"content-type":"application/json", "X-Knack-Application-Id":"60241522a16be4001b611249", "X-Knack-REST-API-KEY":"knack", "Authorization":token}
+        mouthpiece = {FIELD_MAKE: newmake, FIELD_TYPE: newtype, FIELD_MODEL: newmodel, FIELD_THREADS: newthreads, FIELD_FINISH: newfinish}
+        headers = {"content-type":"application/json", "X-Knack-Application-Id": KNACK_APP_ID, "X-Knack-REST-API-KEY":"knack", "Authorization":token}
         response = requests.put(api_url, data=json.dumps(mouthpiece), headers=headers)
         print()
         if response.status_code == 200:
@@ -485,7 +545,8 @@ def editmpc():
             mpcselect = 0
             mympcs()
         else:
-            input(colored("Error! There was a problem with your request. ", 'red') + ("Press Enter to continue..."))
+            console.print("[red]Error! There was a problem with your request.[/red] ", end="")
+            input("Press Enter to continue...")
             mpcselect = 0
             mympcs()
     else:
@@ -512,14 +573,21 @@ def addusr():
         newusrpasswd2 = getpass.getpass("Confirm: ")
         if newusrpasswd1 != newusrpasswd2:
             print()
-            input(colored("Passwords do not match. ", 'red') + ("Process aborted. Press Enter to continue..."))
+            console.print("[red]Passwords do not match.[/red] Process aborted. ", end="")
+            input("Press Enter to continue...")
         else:
             logemail = newusremail
             print()
             input("Press Enter to send to Knack...")
             api_url = "https://api.knack.com/v1/objects/object_1/records"
-            newusr = {"field_1": {"first": newusrfname, "last": newusrlname}, "field_2": newusremail, "field_3": newusrpasswd1, "field_4": "active", "field_5": "Mouthpiecer"}
-            headers = {"content-type":"application/json", "X-Knack-Application-Id":"60241522a16be4001b611249", "X-Knack-REST-API-KEY":"82d8170b-0661-4462-8dbb-3a589abdfc39"}
+            newusr = {
+                FIELD_USER_NAME: {"first": newusrfname, "last": newusrlname},
+                FIELD_USER_EMAIL: newusremail,
+                FIELD_USER_PASSWORD: newusrpasswd1,
+                FIELD_USER_STATUS: "active",
+                FIELD_USER_ROLE: "Mouthpiecer"
+            }
+            headers = {"content-type":"application/json", "X-Knack-Application-Id": KNACK_APP_ID, "X-Knack-REST-API-KEY": KNACK_API_KEY}
             response = requests.post(api_url, data=json.dumps(newusr), headers=headers)
             if response.status_code == 200:
                 loginnewusr()
@@ -528,7 +596,8 @@ def addusr():
                 addmpc()
             else:
                 print()
-                input(colored("Error! There was a problem with your request. ", 'red') + ("Press Enter to continue..."))
+                console.print("[red]Error! There was a problem with your request.[/red] ", end="")
+                input("Press Enter to continue...")
                 mainmenu()
 
 
@@ -537,7 +606,7 @@ def rusr():
     usrid = (input("Enter user ID:"))
     input("Press Enter to send to Knack...")
     api_url = "https://api.knack.com/v1/objects/object_1/records/" + usrid
-    headers = {"content-type":"application/json", "X-Knack-Application-Id":"60241522a16be4001b611249", "X-Knack-REST-API-KEY":"82d8170b-0661-4462-8dbb-3a589abdfc39"}
+    headers = {"content-type":"application/json", "X-Knack-Application-Id": KNACK_APP_ID, "X-Knack-REST-API-KEY": KNACK_API_KEY}
     response = requests.get(api_url, headers=headers)
     print(response.json())
     print(response.status_code)
@@ -562,13 +631,13 @@ while option != "0":
         addusr()
     else:
         print()
-        input(colored("Invalid option selected. ", 'red') + ("Press Enter to continue..."))
+        console.print("[red]Invalid option selected.[/red] ", end="")
+        input("Press Enter to continue...")
 
     print()
     mainmenu()
     option = input("Enter your choice: ")
 
-bannerfile.close()
 print()
 print("You've exited to shell")
 print()
