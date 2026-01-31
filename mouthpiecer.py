@@ -5,6 +5,7 @@ import json                       # for handling JSON
 import getpass                    # provides a password input without revealing text
 from rich.console import Console  # rich terminal output
 from rich.table import Table      # rich tables
+import questionary                # interactive prompts with autocomplete
 
 
 def clear_screen():
@@ -26,6 +27,44 @@ FIELD_TYPE = 'field_24'
 FIELD_THREADS = 'field_25'
 FIELD_FINISH = 'field_26'
 FIELD_NOTE = 'field_27'
+
+# Cache for dynamically fetched makes
+_makes_cache = None
+
+def get_makes():
+    """Fetch available mouthpiece makes from Knack (cached after first call)."""
+    global _makes_cache
+    if _makes_cache is not None:
+        return _makes_cache
+
+    try:
+        url = "https://api.knack.com/v1/objects/object_4/fields"
+        headers = {
+            "X-Knack-Application-Id": KNACK_APP_ID,
+            "X-Knack-REST-API-Key": KNACK_API_KEY
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            fields = response.json().get('fields', [])
+            for field in fields:
+                if field.get('key') == FIELD_MAKE:
+                    _makes_cache = field.get('choices', [])
+                    return _makes_cache
+    except Exception:
+        pass
+
+    # Fallback if API fails
+    _makes_cache = ["Unknown"]
+    return _makes_cache
+
+
+def validate_make(value):
+    """Validate that make is in the allowed list."""
+    makes = get_makes()
+    if value in makes:
+        return True
+    return "Please select a make from the list"
+
 
 # Knack field ID mappings (user object)
 FIELD_USER_NAME = 'field_1'
@@ -176,7 +215,15 @@ def mpcfinishmenu():
 # Add mouthpiece process
 def addmpc():
     print()
-    newmake = input("Make: ")
+    newmake = questionary.autocomplete(
+        "Make:",
+        choices=get_makes(),
+        validate=validate_make,
+        style=questionary.Style([("answer", "fg:green")])
+    ).ask()
+    if newmake is None:  # User pressed Ctrl+C
+        mympcs()
+        return
     print()
     newmodel = input("Model: ")
     mpctypemenu()
@@ -439,11 +486,21 @@ def editmpc():
         break
     print()
     mpc = mouthpieces[selection]
-    console.print("[dim]Press Enter to keep current value[/dim]")
+    console.print("[dim]Press Enter to keep current value (for Make: start typing or press Enter)[/dim]")
     print()
 
-    # Make (Enter keeps current)
-    newmake = input(f"Make ({mpc['Make']}): ") or mpc['Make']
+    # Make (Enter keeps current, autocomplete from list)
+    newmake = questionary.autocomplete(
+        "Make:",
+        choices=get_makes(),
+        default=mpc['Make'],
+        validate=validate_make,
+        style=questionary.Style([("answer", "fg:green")])
+    ).ask()
+    if newmake is None:  # User pressed Ctrl+C
+        mpcselect = 0
+        mympcs()
+        return
     print()
 
     # Model (Enter keeps current)
