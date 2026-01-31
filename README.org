@@ -67,3 +67,4 @@ export KNACK_API_KEY="your-api-key"
 - [ ] Quick duplicate - select an existing mouthpiece as a template for adding a new one
 - [ ] Sorting - sort the table by Make, Type, etc. with a keystroke
 - [X] Rich panels - use box-drawing borders for menus instead of dashes
+- [X] Filtering - filter mouthpieces by Make, Type, or Finish

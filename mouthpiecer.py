@@ -84,6 +84,7 @@ with open('banner.txt', 'r') as bannerfile:
 mpcselect = 0
 mouthpieces = []  # list of mouthpiece dicts from API
 current_page = 0  # for pagination
+current_filters = {}  # e.g., {'Make': 'Holton', 'Type': 'rim'}
 
 
 # Login process
@@ -164,17 +165,26 @@ def mympcsmenu():
     global mpcselect
     clear_screen()
     console.print(f"[yellow]{banner}[/yellow]")
+
+    # Show current filter status
+    filter_status = ""
+    if current_filters:
+        filter_parts = [f"{k}=[cyan]{v}[/cyan]" for k, v in current_filters.items()]
+        filter_status = f"\n[yellow]Filters:[/yellow] {', '.join(filter_parts)}  [dim]([/dim][green]c[/green][dim] to clear)[/dim]"
+
     if mpcselect == 0:
         menu_content = (
             "[green][1][/green] Add mouthpiece      [green][3][/green] Edit mouthpiece\n"
             "[green][2][/green] Delete mouthpiece   [green][4][/green] View details\n"
-            "[green][0][/green] Back to main menu"
+            "[green][5][/green] Filter              [green][0][/green] Back to main menu"
+            f"{filter_status}"
         )
     else:
         menu_content = (
             "[dim][1][/dim] Add mouthpiece      [dim][3][/dim] Edit mouthpiece\n"
             "[dim][2][/dim] Delete mouthpiece   [dim][4][/dim] View details\n"
-            "[dim][0][/dim] Back to main menu"
+            "[dim][5][/dim] Filter              [dim][0][/dim] Back to main menu"
+            f"{filter_status}"
         )
     console.print(Panel(menu_content, title=f"Mouthpieces for [blue]{logemail}[/blue]", border_style="blue"))
     print()
@@ -338,7 +348,7 @@ def addmpc():
 
 # My mouthpieces process
 def mympcs(refresh=True):
-    global mouthpieces, current_page
+    global mouthpieces, current_page, current_filters
     if token == "":
         input("Please log in first. Press Enter...")
     else:
@@ -348,7 +358,8 @@ def mympcs(refresh=True):
         mympcsmenu()
         listmpcs()
 
-        total_pages = (len(mouthpieces) + PAGE_SIZE - 1) // PAGE_SIZE if mouthpieces else 1
+        filtered = get_filtered_mouthpieces()
+        total_pages = (len(filtered) + PAGE_SIZE - 1) // PAGE_SIZE if filtered else 1
 
         while True:
             selection = input("Make a menu selection: ")
@@ -366,10 +377,19 @@ def mympcs(refresh=True):
                 mympcsmenu()
                 listmpcs()
                 continue
+            # Handle clear filter
+            elif selection.lower() == "c":
+                current_filters = {}
+                current_page = 0
+                mympcsmenu()
+                listmpcs()
+                filtered = get_filtered_mouthpieces()
+                total_pages = (len(filtered) + PAGE_SIZE - 1) // PAGE_SIZE if filtered else 1
+                continue
 
             try:
                 selection = (int(selection))
-                if selection not in (1, 2, 3, 4, 0):
+                if selection not in (1, 2, 3, 4, 5, 0):
                     raise ValueError
             except ValueError:
                 console.print("[red]Invalid Option[/red]")
@@ -384,7 +404,10 @@ def mympcs(refresh=True):
             editmpc()
         elif selection == 4:
             viewmpc()
+        elif selection == 5:
+            filtermpc()
         elif selection == 0:
+            current_filters = {}  # Clear filters when leaving
             mainmenu()
 
 
@@ -411,30 +434,47 @@ def fetchmpcs():
         })
 
 
+# Get filtered list of mouthpieces
+def get_filtered_mouthpieces():
+    if not current_filters:
+        return mouthpieces
+    result = mouthpieces
+    for field, value in current_filters.items():
+        result = [mpc for mpc in result if mpc[field] == value]
+    return result
+
+
 # Generate collection stats
 def get_stats():
-    if not mouthpieces:
+    filtered = get_filtered_mouthpieces()
+    if not filtered:
+        if current_filters:
+            return "No mouthpieces match the current filters"
         return "No mouthpieces yet"
 
-    total = len(mouthpieces)
-    unique_makes = len(set(mpc['Make'] for mpc in mouthpieces))
+    total = len(filtered)
+    unique_makes = len(set(mpc['Make'] for mpc in filtered))
 
     # Count by type
     type_counts = {}
-    for mpc in mouthpieces:
+    for mpc in filtered:
         t = mpc['Type']
         type_counts[t] = type_counts.get(t, 0) + 1
 
     type_str = ", ".join(f"{count} {typ}" for typ, count in type_counts.items())
 
-    return f"[bold]{total}[/bold] mouthpieces | [bold]{unique_makes}[/bold] makes | {type_str}"
+    stats = f"[bold]{total}[/bold] mouthpieces | [bold]{unique_makes}[/bold] makes | {type_str}"
+    if current_filters:
+        stats += f" [dim](filtered)[/dim]"
+    return stats
 
 
-# List mouthpieces process (with pagination)
+# List mouthpieces process (with pagination and filtering)
 def listmpcs():
     global current_page
 
-    total = len(mouthpieces)
+    filtered = get_filtered_mouthpieces()
+    total = len(filtered)
     total_pages = (total + PAGE_SIZE - 1) // PAGE_SIZE if total > 0 else 1
 
     # Ensure current_page is valid
@@ -461,7 +501,7 @@ def listmpcs():
     end_idx = min(start_idx + PAGE_SIZE, total)
 
     style = "green" if mpcselect == 1 else None
-    for mpc in mouthpieces[start_idx:end_idx]:
+    for mpc in filtered[start_idx:end_idx]:
         has_note = "X" if mpc['Note'] else ""
         # Hide threads for one-piece mouthpieces
         threads_display = "-" if mpc['Type'] == "one-piece" else mpc['Threads']
@@ -736,6 +776,97 @@ def viewmpc():
     print()
     input("Press Enter to continue...")
     mpcselect = 0
+    mympcs(refresh=False)
+
+
+# Filter mouthpieces
+def filtermpc():
+    global current_filters, current_page
+
+    # Get unique values from collection for Type and Finish
+    types = sorted(set(mpc['Type'] for mpc in mouthpieces if mpc['Type']))
+    finishes = sorted(set(mpc['Finish'] for mpc in mouthpieces if mpc['Finish']))
+
+    print()
+    filter_menu = (
+        "[green][1][/green] Filter by Make\n"
+        "[green][2][/green] Filter by Type\n"
+        "[green][3][/green] Filter by Finish\n"
+        "[green][0][/green] Cancel"
+    )
+    console.print(Panel(filter_menu, title="Filter Options", border_style="yellow"))
+    print()
+
+    while True:
+        selection = input("Choose filter type: ")
+        try:
+            selection = int(selection)
+            if selection not in (0, 1, 2, 3):
+                raise ValueError
+        except ValueError:
+            console.print("[red]Invalid Option[/red]")
+            print()
+            continue
+        break
+
+    if selection == 0:
+        mympcs(refresh=False)
+        return
+
+    # Handle Make with fuzzy selection
+    if selection == 1:
+        print()
+        selected_make = questionary.autocomplete(
+            "Filter by Make:",
+            choices=get_makes(),
+            style=questionary.Style([("answer", "fg:cyan")])
+        ).ask()
+        if selected_make:
+            current_filters['Make'] = selected_make
+            current_page = 0
+        mympcs(refresh=False)
+        return
+
+    # Handle Type and Finish with menu
+    if selection == 2:
+        field = 'Type'
+        values = types
+    elif selection == 3:
+        field = 'Finish'
+        values = finishes
+
+    if not values:
+        console.print("[red]No values to filter by[/red]")
+        input("Press Enter to continue...")
+        mympcs(refresh=False)
+        return
+
+    # Show available values
+    print()
+    value_list = "\n".join(f"[green][{i+1}][/green] {v}" for i, v in enumerate(values))
+    value_list += "\n[green][0][/green] Cancel"
+    console.print(Panel(value_list, title=f"Filter by {field}", border_style="yellow"))
+    print()
+
+    while True:
+        val_selection = input(f"Choose {field}: ")
+        try:
+            val_selection = int(val_selection)
+            if val_selection < 0 or val_selection > len(values):
+                raise ValueError
+        except ValueError:
+            console.print("[red]Invalid Option[/red]")
+            print()
+            continue
+        break
+
+    if val_selection == 0:
+        mympcs(refresh=False)
+        return
+
+    # Apply filter (adds to existing filters)
+    current_filters[field] = values[val_selection - 1]
+    current_page = 0
     mympcs(refresh=False)
 
 
