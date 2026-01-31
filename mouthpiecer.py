@@ -253,16 +253,12 @@ def addmpc():
     print("------------------------")
     print()
     while True:
-        console.print("Send to Knack? [green][y] [n]:[/green] ", end="")
-        conf = input()
-        try:
-            if conf not in ("y", "n"):
-                raise ValueError
-        except ValueError:
-            console.print("[red]Invalid Option[/red]")
-            print()
-            continue
-        break
+        console.print("Send to Knack? [green](y/n):[/green] ", end="")
+        conf = input().lower()
+        if conf in ("y", "n"):
+            break
+        console.print("[red]Invalid Option[/red]")
+        print()
     if conf == "y":
         api_url = "https://api.knack.com/v1/pages/scene_18/views/view_18/records"
         mouthpiece = {FIELD_MAKE: newmake, FIELD_TYPE: newtype, FIELD_MODEL: newmodel, FIELD_THREADS: newthreads, FIELD_FINISH: newfinish}
@@ -384,16 +380,12 @@ def delmpc():
         print()
         mpc = mouthpieces[selection]
         while True:
-            console.print(f"[red]Are you sure you want to delete this[/red] {mpc['Make']} {mpc['Model']} [green][y] [n]:[/green] ", end="")
-            conf = input()
-            try:
-                if conf not in ("y", "n"):
-                    raise ValueError
-            except ValueError:
-                console.print("[red]Invalid Option[/red]")
-                print()
-                continue
-            break
+            console.print(f"[red]Are you sure you want to delete this[/red] {mpc['Make']} {mpc['Model']}? [green](y/n):[/green] ", end="")
+            conf = input().lower()
+            if conf in ("y", "n"):
+                break
+            console.print("[red]Invalid Option[/red]")
+            print()
         if conf == "y":
             delid = mpc['id']
             api_url = "https://api.knack.com/v1/pages/scene_18/views/view_18/records/" + delid
@@ -435,76 +427,68 @@ def editmpc():
         break
     print()
     mpc = mouthpieces[selection]
-    newmake = input(f"Make ({mpc['Make']}): ")
+    console.print("[dim]Press Enter to keep current value[/dim]")
     print()
-    newmodel = input(f"Model ({mpc['Model']}): ")
+
+    # Make (Enter keeps current)
+    newmake = input(f"Make ({mpc['Make']}): ") or mpc['Make']
+    print()
+
+    # Model (Enter keeps current)
+    newmodel = input(f"Model ({mpc['Model']}): ") or mpc['Model']
+
+    # Type (Enter keeps current)
+    type_map = {"one-piece": 1, "two-piece": 2, "cup": 3, "rim": 4}
+    type_reverse = {1: "one-piece", 2: "two-piece", 3: "cup", 4: "rim"}
     mpctypemenu()
     while True:
         option = input(f"Type ({mpc['Type']}): ")
+        if option == "":
+            newtype = mpc['Type']
+            break
         try:
-            option = (int(option))
+            option = int(option)
             if option not in (1, 2, 3, 4):
                 raise ValueError
+            newtype = type_reverse[option]
+            break
         except ValueError:
             console.print("[red]Invalid Option[/red]")
             print()
-            continue
-        break
-    if option == 1:
-        newtype = "one-piece"
-    elif option == 2:
-        newtype = "two-piece"
-    elif option == 3:
-        newtype = "cup"
-    elif option == 4:
-        newtype = "rim"
+
+    # Threads (Enter keeps current, only for non one-piece)
     newthreads = ""
     if newtype != "one-piece":
+        threads_reverse = {"1": "standard", "2": "metric", "3": "other"}
         mpcthreadsmenu()
         while True:
             option = input(f"Threads ({mpc['Threads']}): ")
-            try:
-                if option not in ("1", "2", "3", ""):
-                    raise ValueError
-            except ValueError:
-                console.print("[red]Invalid Option[/red]")
-                print()
-                continue
-            break
-        if option == "1":
-            newthreads = "standard"
-        elif option == "2":
-            newthreads = "metric"
-        elif option == "3":
-            newthreads = "other"
-        elif option == "":
-            newthreads = ""
+            if option == "":
+                newthreads = mpc['Threads']
+                break
+            if option in ("1", "2", "3"):
+                newthreads = threads_reverse[option]
+                break
+            console.print("[red]Invalid Option[/red]")
+            print()
+
+    # Finish (Enter keeps current)
+    finish_reverse = {1: "silver plated", 2: "gold plated", 3: "brass", 4: "nickel", 5: "stainless", 6: "bronze", 7: "plastic"}
     mpcfinishmenu()
     while True:
         option = input(f"Finish ({mpc['Finish']}): ")
+        if option == "":
+            newfinish = mpc['Finish']
+            break
         try:
-            option = (int(option))
+            option = int(option)
             if option not in (1, 2, 3, 4, 5, 6, 7):
                 raise ValueError
+            newfinish = finish_reverse[option]
+            break
         except ValueError:
             console.print("[red]Invalid Option[/red]")
             print()
-            continue
-        break
-    if option == 1:
-        newfinish = "silver plated"
-    elif option == 2:
-        newfinish = "gold plated"
-    elif option == 3:
-        newfinish = "brass"
-    elif option == 4:
-        newfinish = "nickel"
-    elif option == 5:
-        newfinish = "stainless"
-    elif option == 6:
-        newfinish = "bronze"
-    elif option == 7:
-        newfinish = "plastic"
     print()
     print("OLD---------------------")
     console.print(f"Make: [red]{mpc['Make']}[/red]")
@@ -523,16 +507,12 @@ def editmpc():
     print("---------------------NEW")
     print()
     while True:
-        console.print("Save changes? [green][y] [n]:[/green] ", end="")
-        conf = input()
-        try:
-            if conf not in ("y", "n"):
-                raise ValueError
-        except ValueError:
-            console.print("[red]Invalid Option[/red]")
-            print()
-            continue
-        break
+        console.print("Save changes? [green](y/n):[/green] ", end="")
+        conf = input().lower()
+        if conf in ("y", "n"):
+            break
+        console.print("[red]Invalid Option[/red]")
+        print()
     if conf == "y":
         editid = mpc['id']
         api_url = "https://api.knack.com/v1/pages/scene_18/views/view_18/records/" + editid
